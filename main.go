@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/perillo/go-syntax/internal/invoke"
@@ -53,11 +54,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	status := syntax(platforms, args)
+	status, err := syntax(platforms, args)
+	if err != nil {
+		log.Print(err)
+	}
 	os.Exit(status)
 }
 
-func syntax(platforms []platform, patterns []string) int {
+// syntax invokes go vet for all the specified platforms.  It returns the
+// process exit code and, in case of a fatal error, a not nil error.
+func syntax(platforms []platform, patterns []string) (int, error) {
 	nl := []byte("\n")
 	index := 0  // current failed platform
 	status := 0 // process exit status
@@ -65,20 +71,35 @@ func syntax(platforms []platform, patterns []string) int {
 	for _, sys := range platforms {
 		if err := govet(sys, patterns); err != nil {
 			status = 1
-			err := err.(*invoke.Error)
+			cmderr := err.(*invoke.Error)
+
+			// Determine the error type to decide if there was a fatal problem
+			// with the invocation of go vet that requires the termination of
+			// the program.
+			switch oserr := cmderr.Err.(type) {
+			case *exec.Error:
+				return 1, err
+			case *exec.ExitError:
+				code := oserr.ExitCode()
+				// In case of syntax errors, go vet returns exit status 2 and
+				// the error message starts with # and the package name.
+				if cmderr.Stderr[0] != '#' {
+					return code, err
+				}
+			}
 
 			if index > 0 {
 				os.Stderr.Write(nl)
 			}
 			fmt.Fprintf(os.Stderr, "%s/%s using %s\n", sys.os, sys.arch, gocmd)
-			os.Stderr.Write(err.Stderr)
+			os.Stderr.Write(cmderr.Stderr)
 			os.Stderr.Write(nl)
 
 			index++
 		}
 	}
 
-	return status
+	return status, nil
 }
 
 // godistlist invokes go tool dist list to get a list of supported platforms.
