@@ -17,9 +17,14 @@ import (
 	"github.com/perillo/go-syntax/internal/invoke"
 )
 
-// gocmd is the go command to use.  It can be overridden using the GOCMD
-// environment variable.
-var gocmd = "go"
+var (
+	// gocmd is the go command to use.  It can be overridden using the GOCMD
+	// environment variable.
+	gocmd = "go"
+
+	// gocmdpath is the resolved path to the go command.
+	gocmdpath string
+)
 
 type platform struct {
 	os   string
@@ -27,9 +32,14 @@ type platform struct {
 }
 
 func init() {
-	value, ok := os.LookupEnv("GOCMD")
-	if ok {
+	if value, ok := os.LookupEnv("GOCMD"); ok {
 		gocmd = value
+	}
+	gocmdpath = gocmd // set default value
+
+	// Don't report the error now.
+	if path, err := exec.LookPath(gocmd); err == nil {
+		gocmdpath = path
 	}
 }
 
@@ -106,7 +116,7 @@ func syntax(platforms []platform, patterns []string) (int, error) {
 func godistlist() ([]platform, error) {
 	tool := gocmd + " tool dist list"
 
-	cmd := invoke.Command(gocmd, "tool", "dist", "list")
+	cmd := invoke.Command(gocmdpath, "tool", "dist", "list")
 	stdout, err := invoke.Output(cmd)
 	if err != nil {
 		return nil, err
@@ -139,7 +149,7 @@ func godistlist() ([]platform, error) {
 // specified platform.
 func govet(sys platform, patterns []string) error {
 	args := append([]string{"vet"}, patterns...)
-	cmd := invoke.Command(gocmd, args...)
+	cmd := invoke.Command(gocmdpath, args...)
 	cmd.Env = append(os.Environ(), "GOOS="+sys.os, "GOARCH="+sys.arch)
 
 	return invoke.Run(cmd)
