@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/perillo/go-syntax/internal/invoke"
+	"github.com/perillo/go-portable/internal/invoke"
 )
 
 var (
@@ -50,7 +50,7 @@ func main() {
 	// Parse command line.
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
-		fmt.Fprintln(w, "Usage: go-syntax [flags] packages")
+		fmt.Fprintln(w, "Usage: go-portable [flags] packages")
 		fmt.Fprintf(w, "Flags:\n")
 		flag.PrintDefaults()
 	}
