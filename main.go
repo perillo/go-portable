@@ -64,52 +64,37 @@ func main() {
 		log.Fatal(err)
 	}
 
-	status, err := syntax(platforms, args)
-	if err != nil {
-		log.Print(err)
+	if err := run(platforms, args); err != nil {
+		log.Fatal(err)
 	}
-	os.Exit(status)
 }
 
-// syntax invokes go vet for all the specified platforms.  It returns the
-// process exit code and, in case of a fatal error, a not nil error.
-func syntax(platforms []platform, patterns []string) (int, error) {
+// run invokes go vet for all the specified platforms.
+func run(platforms []platform, patterns []string) error {
 	nl := []byte("\n")
-	index := 0  // current failed platform
-	status := 0 // process exit status
+	index := 0 // current failed platform
 
 	for _, sys := range platforms {
-		if err := govet(sys, patterns); err != nil {
-			status = 1
-			cmderr := err.(*invoke.Error)
-
-			// Determine the error type to decide if there was a fatal problem
-			// with the invocation of go vet that requires the termination of
-			// the program.
-			switch oserr := cmderr.Err.(type) {
-			case *exec.Error:
-				return 1, err
-			case *exec.ExitError:
-				code := oserr.ExitCode()
-				// In case of syntax errors, go vet returns exit status 2 and
-				// the error message starts with # and the package name.
-				if cmderr.Stderr[0] != '#' {
-					return code, err
-				}
-			}
-
-			if index > 0 {
-				os.Stderr.Write(nl)
-			}
-			fmt.Fprintf(os.Stderr, "%s/%s using %s\n", sys.os, sys.arch, gocmd)
-			os.Stderr.Write(cmderr.Stderr)
-			os.Stderr.Write(nl)
-
-			index++
+		msg, err := govet(sys, patterns)
+		if err != nil {
+			return err
 		}
+		if msg == nil {
+			continue
+		}
+
+		// Print go vet diagnostic message.
+		if index > 0 {
+			os.Stderr.Write(nl)
+		}
+		fmt.Fprintf(os.Stderr, "%s/%s using %s\n", sys.os, sys.arch, gocmd)
+		os.Stderr.Write(msg)
+		os.Stderr.Write(nl)
+
+		index++
 	}
 
-	return status, nil
+	return nil
 }
 
 // godistlist invokes go tool dist list to get a list of supported platforms.
@@ -146,11 +131,33 @@ func godistlist() ([]platform, error) {
 }
 
 // govet invokes go vet on the packages named by the given patterns, for the
-// specified platform.
-func govet(sys platform, patterns []string) error {
+// specified platform.  It returns the diagnostic message and a non nil error,
+// in case of a fatal error like go command not found or incorrect command line
+// arguments.
+func govet(sys platform, patterns []string) ([]byte, error) {
 	args := append([]string{"vet"}, patterns...)
 	cmd := invoke.Command(gocmdpath, args...)
 	cmd.Env = append(os.Environ(), "GOOS="+sys.os, "GOARCH="+sys.arch)
 
-	return invoke.Run(cmd)
+	if err := invoke.Run(cmd); err != nil {
+		cmderr := err.(*invoke.Error)
+
+		// Determine the error type to decide if there was a fatal problem
+		// with the invocation of go vet that requires the termination of
+		// the program.
+		switch cmderr.Err.(type) {
+		case *exec.Error:
+			return nil, err
+		case *exec.ExitError:
+			// In case of syntax errors, go vet returns exit status 2 and
+			// the error message starts with # and the package name.
+			if cmderr.Stderr[0] != '#' {
+				return nil, err
+			}
+
+			return cmderr.Stderr, nil
+		}
+	}
+
+	return nil, nil
 }
