@@ -149,9 +149,7 @@ func govet(sys platform, patterns []string) ([]byte, error) {
 		case *exec.Error:
 			return nil, err
 		case *exec.ExitError:
-			// In case of syntax errors, go vet returns exit status 2 and
-			// the error message starts with # and the package name.
-			if cmderr.Stderr[0] != '#' {
+			if isFatal(cmderr) {
 				return nil, err
 			}
 
@@ -160,4 +158,24 @@ func govet(sys platform, patterns []string) ([]byte, error) {
 	}
 
 	return nil, nil
+}
+
+// isFatal returns true if the error returned by go vet is fatal.
+func isFatal(err *invoke.Error) bool {
+	// In case of build constraints excluding all Go files, go vet returns
+	// exit status 1 and the error message starts with "package".
+	//
+	// TODO(mperillo): all Go files excluded due to build constraints is
+	// probably a fatal error.
+	if bytes.HasPrefix(err.Stderr, []byte("package")) {
+		return false
+	}
+
+	// In case of syntax errors, go vet returns exit status 2 and
+	// the error message starts with # and the package name.
+	if err.Stderr[0] == '#' {
+		return false
+	}
+
+	return false
 }
