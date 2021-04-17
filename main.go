@@ -171,11 +171,11 @@ func isFatal(err *invoke.Error) bool {
 		return false
 	}
 
-	// In case of syntax errors, go vet returns exit status 2 and
-	// the error message starts with # and the package name.
+	// In case of syntax errors, go vet returns exit status 2 and the error
+	// message starts with # and the package name.
 	if err.Stderr[0] == '#' {
 		return false
 	}
 
-	return false
+	return true
 }
