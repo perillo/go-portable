@@ -16,8 +16,6 @@ import (
 	"strings"
 )
 
-var Command = exec.Command
-
 // Error is the error returned when a command returns an error.
 type Error struct {
 	Cmd    string   // the command invoked

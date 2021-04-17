@@ -101,7 +101,7 @@ func run(platforms []platform, patterns []string) error {
 func godistlist() ([]platform, error) {
 	tool := gocmd + " tool dist list"
 
-	cmd := invoke.Command(gocmdpath, "tool", "dist", "list")
+	cmd := exec.Command(gocmdpath, "tool", "dist", "list")
 	stdout, err := invoke.Output(cmd)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func godistlist() ([]platform, error) {
 // arguments.
 func govet(sys platform, patterns []string) ([]byte, error) {
 	args := append([]string{"vet"}, patterns...)
-	cmd := invoke.Command(gocmdpath, args...)
+	cmd := exec.Command(gocmdpath, args...)
 	cmd.Env = append(os.Environ(), "GOOS="+sys.os, "GOARCH="+sys.arch)
 
 	if err := invoke.Run(cmd); err != nil {
