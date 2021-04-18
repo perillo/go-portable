@@ -134,8 +134,7 @@ func godistlist() ([]platform, error) {
 
 // govet invokes go vet on the packages named by the given patterns, for the
 // specified platform.  It returns the diagnostic message and a non nil error,
-// in case of a fatal error like go command not found or incorrect command line
-// arguments.
+// in case of a fatal error like go command not found.
 func govet(sys platform, patterns []string) ([]byte, error) {
 	args := append([]string{"vet"}, patterns...)
 	cmd := exec.Command(gocmd, args...)
@@ -151,10 +150,6 @@ func govet(sys platform, patterns []string) ([]byte, error) {
 		case *exec.Error:
 			return nil, err
 		case *exec.ExitError:
-			if isFatal(cmderr) {
-				return nil, err
-			}
-
 			return cmderr.Stderr, nil
 		}
 
@@ -162,24 +157,4 @@ func govet(sys platform, patterns []string) ([]byte, error) {
 	}
 
 	return nil, nil
-}
-
-// isFatal returns true if the error returned by go vet is fatal.
-func isFatal(err *invoke.Error) bool {
-	// In case of build constraints excluding all Go files, go vet returns
-	// exit status 1 and the error message starts with "package".
-	//
-	// TODO(mperillo): all Go files excluded due to build constraints is
-	// probably a fatal error.
-	if bytes.HasPrefix(err.Stderr, []byte("package")) {
-		return false
-	}
-
-	// In case of syntax errors, go vet returns exit status 2 and the error
-	// message starts with # and the package name.
-	if err.Stderr[0] == '#' {
-		return false
-	}
-
-	return true
 }
