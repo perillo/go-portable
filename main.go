@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/perillo/go-portable/internal/invoke"
@@ -22,8 +23,8 @@ var (
 	// environment variable.
 	gocmd = "go"
 
-	// gocmdpath is the resolved path to the go command.
-	gocmdpath string
+	// gocmdshort is the base name the go command, used in error messages.
+	gocmdshort string
 )
 
 type platform struct {
@@ -35,12 +36,13 @@ func init() {
 	if value, ok := os.LookupEnv("GOCMD"); ok {
 		gocmd = value
 	}
-	gocmdpath = gocmd // set default value
 
 	// Don't report the error now.
 	if path, err := exec.LookPath(gocmd); err == nil {
-		gocmdpath = path
+		gocmd = path
 	}
+
+	gocmdshort = filepath.Base(gocmd)
 }
 
 func main() {
@@ -87,7 +89,7 @@ func run(platforms []platform, patterns []string) error {
 		if index > 0 {
 			os.Stderr.Write(nl)
 		}
-		fmt.Fprintf(os.Stderr, "%s/%s using %s\n", sys.os, sys.arch, gocmd)
+		fmt.Fprintf(os.Stderr, "%s/%s using %s\n", sys.os, sys.arch, gocmdshort)
 		os.Stderr.Write(msg)
 		os.Stderr.Write(nl)
 
@@ -99,9 +101,9 @@ func run(platforms []platform, patterns []string) error {
 
 // godistlist invokes go tool dist list to get a list of supported platforms.
 func godistlist() ([]platform, error) {
-	tool := gocmd + " tool dist list"
+	tool := gocmdshort + " tool dist list"
 
-	cmd := exec.Command(gocmdpath, "tool", "dist", "list")
+	cmd := exec.Command(gocmd, "tool", "dist", "list")
 	stdout, err := invoke.Output(cmd)
 	if err != nil {
 		return nil, err
@@ -136,7 +138,7 @@ func godistlist() ([]platform, error) {
 // arguments.
 func govet(sys platform, patterns []string) ([]byte, error) {
 	args := append([]string{"vet"}, patterns...)
-	cmd := exec.Command(gocmdpath, args...)
+	cmd := exec.Command(gocmd, args...)
 	cmd.Env = append(os.Environ(), "GOOS="+sys.os, "GOARCH="+sys.arch)
 
 	if err := invoke.Run(cmd); err != nil {
