@@ -157,6 +157,8 @@ func govet(sys platform, patterns []string) ([]byte, error) {
 
 			return cmderr.Stderr, nil
 		}
+
+		return nil, err // should not be reached
 	}
 
 	return nil, nil
