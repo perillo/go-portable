@@ -27,6 +27,21 @@ var (
 	gocmdshort string
 )
 
+// First class ports, taken from
+// https://github.com/golang/go/wiki/PortingPolicy#first-class-ports
+var firstClass = map[string]bool{
+	"linux/amd64":   true,
+	"linux/386":     true,
+	"linux/arm":     true,
+	"linux/arm64":   true,
+	"darwin/amd64":  true,
+	"windows/amd64": true,
+	"windows/386":   true,
+}
+
+// Flags.
+var primary = flag.Bool("first-class", false, "use only first class ports")
+
 type platform struct {
 	os   string
 	arch string
@@ -61,7 +76,7 @@ func main() {
 
 	// Call godistlist outside the syntax function, so that we can detect a
 	// problem with the go tool early.
-	platforms, err := godistlist()
+	platforms, err := godistlist(*primary)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,7 +115,8 @@ func run(platforms []platform, patterns []string) error {
 }
 
 // godistlist invokes go tool dist list to get a list of supported platforms.
-func godistlist() ([]platform, error) {
+// When primary is true, only first class ports are returned.
+func godistlist(primary bool) ([]platform, error) {
 	tool := gocmdshort + " tool dist list"
 
 	cmd := exec.Command(gocmd, "tool", "dist", "list")
@@ -117,6 +133,10 @@ func godistlist() ([]platform, error) {
 		fields := strings.Split(line, "/")
 		if len(fields) != 2 {
 			return nil, fmt.Errorf("%s: invalid output: %q", tool, line)
+		}
+
+		if primary && !firstClass[line] {
+			continue
 		}
 
 		ent := platform{
