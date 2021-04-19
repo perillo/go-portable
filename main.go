@@ -115,7 +115,7 @@ func run(platforms []platform, patterns []string) error {
 }
 
 // godistlist invokes go tool dist list to get a list of supported platforms.
-// When primary is true, only first class ports are returned.
+// When primary is true, only first class ports are included.
 func godistlist(primary bool) ([]platform, error) {
 	tool := gocmdshort + " tool dist list"
 
