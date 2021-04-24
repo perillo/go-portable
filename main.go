@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// go-portable checks if a package is compatible with other platforms.
+//
+// Internally, it invokes `go vet` on all the officially supported ports, as
+// reported by `go tool dist list`.
 package main
 
 import (
