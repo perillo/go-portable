@@ -29,3 +29,7 @@ absolute file paths to recurse into them.
 
 When the `-first-class` option is set, only
 [first class ports](https://github.com/golang/go/wiki/PortingPolicy#first-class-ports) are used.
+
+By default, `go-portable` uses the `go` command installed on the system, but it
+is possible to specify a different version using the `GOCMD` environment
+variable.
