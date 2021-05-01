@@ -72,7 +72,7 @@ func main() {
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
 		fmt.Fprintln(w, "Usage: go-portable [-first-class] [packages]")
-		fmt.Fprintln(w, "Options:")
+		fmt.Fprintln(w, "Flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
