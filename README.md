@@ -35,4 +35,4 @@ can be set to `vet` or `build`, with `vet` being the default.
 
 By default, `go-portable` uses the `go` command installed on the system, but it
 is possible to specify a different version using the `GOCMD` environment
-variable.
+variable.  When using `-mode build`, `GOCMD` should be `go1.8 or later`.
