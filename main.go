@@ -57,7 +57,7 @@ type platform struct {
 }
 
 func init() {
-	if value, ok := os.LookupEnv("GOCMD"); ok {
+	if value := os.Getenv("GOCMD"); value != "" {
 		gocmd = value
 	}
 
