@@ -22,6 +22,8 @@ import (
 	"github.com/perillo/go-portable/internal/invoke"
 )
 
+const usage = "Usage: go-portable [-first-class] [-mode mode] [packages]"
+
 var (
 	// gocmd is the go command to use.  It can be overridden using the GOCMD
 	// environment variable.
@@ -73,9 +75,8 @@ func main() {
 
 	// Parse command line.
 	flag.Usage = func() {
-		w := flag.CommandLine.Output()
-		fmt.Fprintln(w, "Usage: go-portable [-first-class] [-mode mode] [packages]")
-		fmt.Fprintln(w, "Flags:")
+		fmt.Fprintln(os.Stderr, usage)
+		fmt.Fprintln(os.Stderr, "Flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
