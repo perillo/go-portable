@@ -44,7 +44,10 @@ var firstClass = map[string]bool{
 }
 
 // Flags.
-var primary = flag.Bool("first-class", false, "use only first class ports")
+var (
+	mode    = flag.String("mode", "vet", "verification mode (vet or build)")
+	primary = flag.Bool("first-class", false, "use only first class ports")
+)
 
 type platform struct {
 	os   string
@@ -71,12 +74,21 @@ func main() {
 	// Parse command line.
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
-		fmt.Fprintln(w, "Usage: go-portable [-first-class] [packages]")
+		fmt.Fprintln(w, "Usage: go-portable [-first-class] [-mode mode] [packages]")
 		fmt.Fprintln(w, "Flags:")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 	args := flag.Args()
+	switch *mode {
+	case "vet", "build":
+	default:
+		const err = "must be \"vet\" or \"build\""
+		fmt.Fprintf(os.Stderr, "invalid value %q for flag -mode: %s\n", *mode, err)
+		flag.Usage()
+
+		os.Exit(2)
+	}
 
 	// Call godistlist outside the syntax function, so that we can detect a
 	// problem with the go tool early.
@@ -85,18 +97,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := run(platforms, args); err != nil {
+	if err := run(platforms, args, *mode); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// run invokes go vet for all the specified platforms.
-func run(platforms []platform, patterns []string) error {
+// run invokes go vet or go build for all the specified platforms.
+func run(platforms []platform, patterns []string, mode string) error {
+	tool := govet
+	if mode == "build" {
+		tool = gobuild
+	}
+
 	nl := []byte("\n")
 	index := 0 // current failed platform
 
 	for _, sys := range platforms {
-		msg, err := govet(sys, patterns)
+		msg, err := tool(sys, patterns)
 		if err != nil {
 			return err
 		}
@@ -169,6 +186,35 @@ func govet(sys platform, patterns []string) ([]byte, error) {
 
 		// Determine the error type to decide if there was a fatal problem
 		// with the invocation of go vet that requires the termination of
+		// the program.
+		switch cmderr.Err.(type) {
+		case *exec.Error:
+			return nil, err
+		case *exec.ExitError:
+			return cmderr.Stderr, nil
+		}
+
+		return nil, err // should not be reached
+	}
+
+	return nil, nil
+}
+
+// gobuild invokes go build on the packages named by the given patterns, for
+// the specified platform.  It returns the diagnostic message and a non nil
+// error, in case of a fatal error like go command not found.
+func gobuild(sys platform, patterns []string) ([]byte, error) {
+	// NOTE(mperillo): Only go1.8 and later are supported in gobuild.
+	args := append([]string{"build"}, "-o", os.DevNull)
+	args = append(args, patterns...)
+	cmd := exec.Command(gocmd, args...)
+	cmd.Env = append(os.Environ(), "GOOS="+sys.os, "GOARCH="+sys.arch, "CGO_ENABLED=0")
+
+	if err := invoke.Run(cmd); err != nil {
+		cmderr := err.(*invoke.Error)
+
+		// Determine the error type to decide if there was a fatal problem
+		// with the invocation of go build that requires the termination of
 		// the program.
 		switch cmderr.Err.(type) {
 		case *exec.Error:
