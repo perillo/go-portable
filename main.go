@@ -22,7 +22,7 @@ import (
 	"github.com/perillo/go-portable/internal/invoke"
 )
 
-const usage = "Usage: go-portable [-first-class] [-mode mode] [packages]"
+const usage = "Usage: go-portable [-first-class] [-mode <mode>] [packages]"
 
 var (
 	// gocmd is the go command to use.  It can be overridden using the GOCMD
