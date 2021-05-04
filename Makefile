@@ -21,7 +21,8 @@ TESTFLAGS := -race -v
 # Default rule.
 .PHONY: build
 build:
-	go build -o build ./...
+	go build -o /dev/null ./...
+	go build -o build ./... 2>/dev/null || true
 
 # Custom rules.
 .PHONY: bench
