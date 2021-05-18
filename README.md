@@ -1,4 +1,4 @@
-# go-portable is a portability checker for Go packages.
+# Go Portability Checker
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/perillo/go-portable.svg)](https://pkg.go.dev/github.com/perillo/go-portable)
 
